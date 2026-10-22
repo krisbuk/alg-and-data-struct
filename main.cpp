@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include <cmath>
 #include <limits>
+#include <type_traits>
+#include <algorithm>
 
 template <typename T>
 T saturate_add(T a, T b) {
@@ -140,7 +142,12 @@ public:
 				T p2 = T{};
 				if (i < other.rows && j < other.cols) p2 = other(i, j);
 
-				result(i, j) = saturate_add(p1, p2);
+				if (std::is_same<T, bool>::value) {
+					result(i, j) = p1 || p2;
+				}
+				else {
+					result(i, j) = saturate_add(p1, p2);
+				}
 			}
 		}
 		return result;
@@ -162,9 +169,9 @@ public:
 		for (int i = 0; i < r; ++i) {
 			for (int j = 0; j < c; ++j) {
 				T p1 = T{};
-				if (i < rows && j < cols) p1 = (*this)(r, c);
+				if (i < rows && j < cols) p1 = (*this)(i, j);
 				T p2 = T{};
-				if (i < other.rows && j < other.cols) p2 = (*this)(r, c);
+				if (i < other.rows && j < other.cols) p2 = (*this)(i, j);
 
 				result(i, j) = saturate_sub(p1, p2);
 			}
@@ -188,11 +195,16 @@ public:
 		for (int i = 0; i < r; ++i) {
 			for (int j = 0; j < c; ++j) {
 				T p1 = T{};
-				if (i < rows && j < cols) p1 = (*this)(r, c);
+				if (i < rows && j < cols) p1 = (*this)(i, j);
 				T p2 = T{};
-				if (i < other.rows && j < other.cols) p2 = (*this)(r, c);
+				if (i < other.rows && j < other.cols) p2 = (*this)(i, j);
 
-				result(i, j) = saturate_mul(p1, p2);
+				if (std::is_same<T, bool>::value) {
+					result(i, j) = p1 && p2;
+				}
+				else {
+					result(i, j) = saturate_mul(p1, p2);
+				}
 			}
 		}
 		return result;
@@ -208,7 +220,7 @@ public:
 
 	Grayscale operator / (T num) const {
 		if (num == T{}) {
-			throw std::invalid_argument("Error")
+			throw std::invalid_argument("Error");
 		}
 		Grayscale result(rows, cols, false);
 		for (int i = 0; i < rows * cols; ++i) {
@@ -220,22 +232,27 @@ public:
 	Grayscale operator ! () const {
 		Grayscale result(rows, cols, false);
 		for (int i = 0; i < rows * cols; ++i) {
-			double inv = -static_cast<double>(data[i]);
-			double maxlim = static_cast<double>(std::numeric_limits<T>::max());
-			double minlim = static_cast<double>(std::numeric_limits<T>::lowest());
-			if (inv > maxlim) inv = maxlim;
-			if (inv > minlim) inv = minlim;
-			result.data[i] = static_cast<T>(inv);
+			if (std::is_same<T, bool>::value) {
+				result.data[i] = !data[i];
+			}
+			else {
+				double inv = -static_cast<double>(data[i]);
+				double maxlim = static_cast<double>(std::numeric_limits<T>::max());
+				double minlim = static_cast<double>(std::numeric_limits<T>::lowest());
+				if (inv > maxlim) inv = maxlim;
+				if (inv < minlim) inv = minlim;
+				result.data[i] = static_cast<T>(inv);
+			}
 		}
 		return result;
 	}
 
 	// коммутативность
-	friend Grayscale operator + (T scalar, const GrayscaleImage& img) {
+	friend Grayscale operator + (T scalar, const Grayscale& img) {
 		return img + scalar;
 	}
 
-	friend Grayscale operator * (T scalar, const GrayscaleImage& img) {
+	friend Grayscale operator * (T scalar, const Grayscale& img) {
 		return img * scalar;
 	}
 	
@@ -265,3 +282,6 @@ public:
 		return os;
 	}
 };
+
+template <typename T>
+const double Grayscale<T>::epsilon = 1e-6;
