@@ -285,3 +285,45 @@ public:
 
 template <typename T>
 const double Grayscale<T>::epsilon = 1e-6;
+
+// задача: Нарисуйте прямую с координатами начала x1,y1	
+// и координатами конца x2,y2 (значение для заполнения может задаваться пользователем)
+
+template <typename T>
+void make_line(Grayscale<T>& img, int x1, int y1, int x2, int y2, T color) {
+	int r = img.get_rows();
+	int c = img.get_cols();
+
+	int dx = std::abs(x2 - x1);
+	int dy = std::abs(y2 - y1);
+
+	int x_way;
+	if (x1 < x2) x_way = 1;
+	else { x_way = -1; }
+
+	int y_way;
+	if (y1 < y2) y_way = 1;
+	else { y_way = -1; }
+
+	int err = dx - dy;
+
+	while (true) {
+		if (y1 >= 0 && y1 < r && x1 >= 0 && x1 < c) {
+			img(y1, x1) = color;
+		}
+
+		if (x1 == x2 && y1 == y2) {
+			break;
+		}
+
+		int next = 2 * err;
+		if (next > -dy) {
+			err -= dy;
+			x1 += x_way;
+		}
+		if (next < dx) {
+			err += dx;
+			y1 += y_way;
+		}
+	}
+}
