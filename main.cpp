@@ -7,6 +7,23 @@
 #include <algorithm>
 
 template <typename T>
+T generate_random_value(std::mt19937& gen, T) {
+	std::uniform_real_distribution<double> dist(-10.0, 10.0);
+	return static_cast<T>(dist(gen));
+}
+
+inline int generate_random_value(std::mt19937& gen, int) {
+	std::uniform_int_distribution<int> dist(0, 10);
+	return dist(gen);
+}
+
+inline bool generate_random_value(std::mt19937& gen, bool) {
+	std::uniform_int_distribution<int> dist(0, 1);
+	return dist(gen) == 1;
+}
+
+
+template <typename T>
 T saturate_add(T a, T b) {
 	double res = static_cast<double>(a) + static_cast<double>(b);
 	if (res > static_cast<double>(std::numeric_limits<T>::max())) {
@@ -57,8 +74,8 @@ inline bool saturate_mul(bool a, bool b) {
 template <typename T>
 T saturate_invert(T val) {
 	double inv = -static_cast<double>(val);
-	double maxlim = static_cast<double>(std::numeric_limits<T>::max());
-	double minlim = static_cast<double>(std::numeric_limits<T>::lowest());
+	const double maxlim = static_cast<double>(std::numeric_limits<T>::max());
+	const double minlim = static_cast<double>(std::numeric_limits<T>::lowest());
 	if (inv > maxlim) inv = maxlim;
 	if (inv < minlim) inv = minlim;
 	return static_cast<T>(inv);
@@ -87,7 +104,7 @@ public:
 			std::random_device rd;
 			std::mt19937 gen(rd());
 			for (int i = 0; i < rows * cols; ++i) {
-				data[i] = generate_random_value<T>(gen);
+				data[i] = generate_random_value(gen, T{});
 			}
 		}
 		else {
@@ -236,7 +253,7 @@ public:
 	}
 
 	friend Grayscale operator * (T num, const Grayscale& img) {
-		return num * scalar;
+		return img * num;
 	}
 	
 	double fill_factor() const {
@@ -309,4 +326,51 @@ void make_line(Grayscale<T>& img, int x1, int y1, int x2, int y2, T color) {
 			y1 += y_way;
 		}
 	}
+}
+
+int main() {
+	std::cout << "Демонстрация работы для int\n";
+	Grayscale<int> img1(3, 4, true);
+	Grayscale<int> img2(3, 4, true);
+
+	std::cout << "Изображение 1 (Случайное):\n" << img1;
+	std::cout << "Изображение 2 (Случайное):\n" << img2;
+
+	std::cout << "Оператор + (img1 + img2):\n" << (img1 + img2);
+	std::cout << "Оператор - (img1 - img2):\n" << (img1 - img2);
+	std::cout << "Оператор * (img1 * img2):\n" << (img1 * img2);
+	std::cout << "Оператор + скаляр (img1 + 5):\n" << (img1 + 5);
+	std::cout << "Коммутативный оператор * (10 * img1):\n" << (10 * img1);
+	std::cout << "Оператор / скаляр (img1 / 2):\n" << (img1 / 2);
+	std::cout << "Унарный оператор ! (Инверсия img1):\n" << (!img1);
+
+	std::cout << "Сравнение на равенство (img1 == img2): " << (img1 == img2 ? "Равны" : "Не равны") << "\n";
+	std::cout << "Коэффициент заполнения (fill_factor img1): " << img1.fill_factor() << "\n\n";
+
+	std::cout << "Демонстрация для bool\n";
+	Grayscale<bool> b_img1(3, 3, true);
+	Grayscale<bool> b_img2(3, 3, true);
+
+	std::cout << "Бинарное изображение 1 (Случайное):\n" << b_img1;
+	std::cout << "Бинарное изображение 2 (Случайное):\n" << b_img2;
+	std::cout << "Поэлементное ИЛИ (b_img1 + b_img2):\n" << (b_img1 + b_img2);
+	std::cout << "Поэлементное И (b_img1 * b_img2):\n" << (b_img1 * b_img2);
+	std::cout << "Инверсия маски (!b_img1):\n" << (!b_img1);
+
+	std::cout << "Тест задания 1\n";
+	Grayscale<int> line_canvas(7, 15, false);
+	std::cout << "Холст до отрисовки:\n" << line_canvas;
+	make_line(line_canvas, 1, 1, 13, 5, 9);
+	std::cout << "Холст после отрисовки линии из (1,1) в (13,5):\n" << line_canvas;
+
+	std::cout << "Тестирование исключений\n";
+	try {
+		Grayscale<int> wrong_size(3, 3, false);
+		std::cout << "Попытка сложить матрицы 3x4 и 3x3:\n";
+		img1 + wrong_size;
+	}
+	catch (const std::exception& e) {
+		std::cout << "Перехвачено исключение: " << e.what() << "\n";
+	}
+	return 0;
 }
