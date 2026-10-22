@@ -18,6 +18,10 @@ T saturate_add(T a, T b) {
 	return static_cast<T>(res);
 }
 
+inline bool saturate_add(bool a, bool b) {
+	return a || b;
+}
+
 template <typename T>
 T saturate_sub(T a, T b) {
 	double res = static_cast<double>(a) - static_cast<double>(b);
@@ -30,6 +34,10 @@ T saturate_sub(T a, T b) {
 	return static_cast<T>(res);
 }
 
+inline bool saturate_sub(bool a, bool b) {
+	return a && !b;
+}
+
 template <typename T>
 T saturate_mul(T a, T b) {
 	double res = static_cast<double>(a) * static_cast<double>(b);
@@ -40,6 +48,23 @@ T saturate_mul(T a, T b) {
 		return std::numeric_limits<T>::lowest();
 	}
 	return static_cast<T>(res);
+}
+
+inline bool saturate_mul(bool a, bool b) {
+	return a && b;
+}
+
+template <typename T>
+T saturate_invert(T val) {
+	double inv = -static_cast<double>(val);
+	double maxlim = static_cast<double>(std::numeric_limits<T>::max());
+	double minlim = static_cast<double>(std::numeric_limits<T>::lowest());
+	if (inv > maxlim) inv = maxlim;
+	if (inv < minlim) inv = minlim;
+	return static_cast<T>(inv);
+}
+inline bool saturate_invert(bool val) {
+	return !val;
 }
 
 template <typename T>
@@ -61,9 +86,8 @@ public:
 		if (choice == true) {
 			std::random_device rd;
 			std::mt19937 gen(rd());
-			std::uniform_real_distribution<double> dist(-10, 10);
 			for (int i = 0; i < rows * cols; ++i) {
-				data[i] = static_cast<T>(dist(gen()));
+				data[i] = generate_random_value<T>(gen);
 			}
 		}
 		else {
@@ -108,7 +132,7 @@ public:
 	}
 
 	const T& operator () (int r, int c) const {
-		if (r >= rows || c >= cols) {
+		if (r < 0 || r >= rows || c < 0 || c >= cols) {
 			throw std::out_of_range("Index is out of range");
 		}
 		return data[r * cols + c];
@@ -130,25 +154,13 @@ public:
 		return !(*this == other);
 	}
 
-	Grayscale operator + (const Grayscale& other) const {
-		int r = std::max(rows, other.rows);
-		int c = std::max(cols, other.cols);
-		Grayscale result(r, c, false);
-
-		for (int i = 0; i < r; ++i) {
-			for (int j = 0; j < c; ++j) {
-				T p1 = T{};
-				if (i < rows && j < cols) p1 = (*this)(i, j);
-				T p2 = T{};
-				if (i < other.rows && j < other.cols) p2 = other(i, j);
-
-				if (std::is_same<T, bool>::value) {
-					result(i, j) = p1 || p2;
-				}
-				else {
-					result(i, j) = saturate_add(p1, p2);
-				}
-			}
+	Grayscale operator+(const Grayscale& other) const {
+		if (rows != other.rows || cols != other.cols) {
+			throw std::invalid_argument("Matrix sizes must match");
+		}
+		Grayscale result(rows, cols, false);
+		for (int i = 0; i < rows * cols; ++i) {
+			result.data[i] = saturate_add(data[i], other.data[i]);
 		}
 		return result;
 	}
@@ -161,20 +173,13 @@ public:
 		return result;
 	}
 
-	Grayscale operator - (const Grayscale& other) const {
-		int r = std::max(rows, other.rows);
-		int c = std::max(cols, other.cols);
-		Grayscale result(r, c, false);
-
-		for (int i = 0; i < r; ++i) {
-			for (int j = 0; j < c; ++j) {
-				T p1 = T{};
-				if (i < rows && j < cols) p1 = (*this)(i, j);
-				T p2 = T{};
-				if (i < other.rows && j < other.cols) p2 = (*this)(i, j);
-
-				result(i, j) = saturate_sub(p1, p2);
-			}
+	Grayscale operator-(const Grayscale& other) const {
+		if (rows != other.rows || cols != other.cols) {
+			throw std::invalid_argument("Matrix sizes must match");
+		}
+		Grayscale result(rows, cols, false);
+		for (int i = 0; i < rows * cols; ++i) {
+			result.data[i] = saturate_sub(data[i], other.data[i]);
 		}
 		return result;
 	}
@@ -187,25 +192,13 @@ public:
 		return result;
 	}
 
-	Grayscale operator * (const Grayscale& other) const {
-		int r = std::max(rows, other.rows);
-		int c = std::max(cols, other.cols);
-		Grayscale result(r, c, false);
-
-		for (int i = 0; i < r; ++i) {
-			for (int j = 0; j < c; ++j) {
-				T p1 = T{};
-				if (i < rows && j < cols) p1 = (*this)(i, j);
-				T p2 = T{};
-				if (i < other.rows && j < other.cols) p2 = (*this)(i, j);
-
-				if (std::is_same<T, bool>::value) {
-					result(i, j) = p1 && p2;
-				}
-				else {
-					result(i, j) = saturate_mul(p1, p2);
-				}
-			}
+	Grayscale operator*(const Grayscale& other) const {
+		if (rows != other.rows || cols != other.cols) {
+			throw std::invalid_argument("Matrix sizes must match");
+		}
+		Grayscale result(rows, cols, false);
+		for (int i = 0; i < rows * cols; ++i) {
+			result.data[i] = saturate_mul(data[i], other.data[i]);
 		}
 		return result;
 	}
@@ -220,7 +213,7 @@ public:
 
 	Grayscale operator / (T num) const {
 		if (num == T{}) {
-			throw std::invalid_argument("Error");
+			throw std::invalid_argument("Error: division by zero");
 		}
 		Grayscale result(rows, cols, false);
 		for (int i = 0; i < rows * cols; ++i) {
@@ -229,31 +222,21 @@ public:
 		return result;
 	}
 
-	Grayscale operator ! () const {
+	Grayscale operator!() const {
 		Grayscale result(rows, cols, false);
 		for (int i = 0; i < rows * cols; ++i) {
-			if (std::is_same<T, bool>::value) {
-				result.data[i] = !data[i];
-			}
-			else {
-				double inv = -static_cast<double>(data[i]);
-				double maxlim = static_cast<double>(std::numeric_limits<T>::max());
-				double minlim = static_cast<double>(std::numeric_limits<T>::lowest());
-				if (inv > maxlim) inv = maxlim;
-				if (inv < minlim) inv = minlim;
-				result.data[i] = static_cast<T>(inv);
-			}
+			result.data[i] = saturate_invert(data[i]);
 		}
 		return result;
 	}
 
 	// коммутативность
-	friend Grayscale operator + (T scalar, const Grayscale& img) {
-		return img + scalar;
+	friend Grayscale operator + (T num, const Grayscale& img) {
+		return img + num;
 	}
 
-	friend Grayscale operator * (T scalar, const Grayscale& img) {
-		return img * scalar;
+	friend Grayscale operator * (T num, const Grayscale& img) {
+		return num * scalar;
 	}
 	
 	double fill_factor() const {
