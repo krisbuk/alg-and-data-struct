@@ -329,6 +329,7 @@ void make_line(Grayscale<T>& img, int x1, int y1, int x2, int y2, T color) {
 }
 
 int main() {
+	std::cout << "----------------------------------";
 	std::cout << "Демонстрация работы для int\n";
 	Grayscale<int> img1(3, 4, true);
 	Grayscale<int> img2(3, 4, true);
@@ -347,6 +348,19 @@ int main() {
 	std::cout << "Сравнение на равенство (img1 == img2): " << (img1 == img2 ? "Равны" : "Не равны") << "\n";
 	std::cout << "Коэффициент заполнения (fill_factor img1): " << img1.fill_factor() << "\n\n";
 
+	std::cout << "----------------------------------";
+	std::cout << "Демонстрация для unsigned char\n";
+	Grayscale<unsigned char> u_img1(3, 3, true);
+	Grayscale<unsigned char> u_img2(3, 3, true);
+
+	std::cout << "Изображение 1 (unsigned char):\n" << u_img1;
+	std::cout << "Изображение 2 (unsigned char):\n" << u_img2;
+
+	std::cout << "Сложение с насыщением (u_img1 + u_img2):\n" << (u_img1 + u_img2);
+	std::cout << "Вычитание с насыщением (u_img1 - u_img2):\n" << (u_img1 - u_img2);
+	std::cout << "Умножение со скаляром (u_img1 * 2):\n" << (u_img1 * 2) << "\n";
+
+	std::cout << "----------------------------------";
 	std::cout << "Демонстрация для bool\n";
 	Grayscale<bool> b_img1(3, 3, true);
 	Grayscale<bool> b_img2(3, 3, true);
@@ -357,6 +371,7 @@ int main() {
 	std::cout << "Поэлементное И (b_img1 * b_img2):\n" << (b_img1 * b_img2);
 	std::cout << "Инверсия маски (!b_img1):\n" << (!b_img1);
 
+	std::cout << "----------------------------------";
 	std::cout << "Тест задания 1\n";
 	Grayscale<int> line_canvas(7, 15, false);
 	std::cout << "Холст до отрисовки:\n" << line_canvas;
